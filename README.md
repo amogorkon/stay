@@ -20,7 +20,7 @@ A simple list of values is written as **key: \[1 2 3 asdf "foo bar"\]**.
 Comments are also line-based. Any line that starts with # is ignored. Additionally, a block can be commented out by putting ### above and below of the block.
 
 ### Long values
-Anything that involves linebreak (\n) characters would need to be manually escaped, but there is a simple solution to that: long values. A key: with **:::** instead of : will start a block of long value, where everything is escaped until a single line starting with triple colons (if inside the block, it can be manually escaped by \:::, which is the only exception, everything else is parsed as-is).
+Anything that involves linebreak (\n) characters would need to be manually escaped, but there is a simple solution to that: long values. A key: with **:::** instead of : will start a block of long value, where everything is escaped until a single line starting with triple colons (if inside the block, it can be manually escaped by \\:::, which is the only exception, everything else is parsed as-is).
  
     key:::
     long
