@@ -9,13 +9,9 @@ with open("META.stay") as f:
     for meta in load(f):
         pass
 
-with open("README.rst") as f:
+with open("README.md") as f:
     LONG_DESCRIPTION = f.read()
     
-def setup(*args, **kwargs):
-    print(args)
-    print(kwargs)
-
 setup(
     PACKAGES=find_packages(where="src"),
     long_description=LONG_DESCRIPTION,
