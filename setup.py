@@ -1,9 +1,11 @@
 
-import sys
-sys.path.append("src")
-from setuptools import setup, find_packages
+import os, sys
+here = (os.path.abspath(os.path.dirname(__file__)))
+src = os.path.join(here, "src")
+sys.path.append(src)
 
 from stay import load
+from setuptools import setup, find_packages
 
 with open("META.stay") as f:
     for meta in load(f):
