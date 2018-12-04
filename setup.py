@@ -15,7 +15,9 @@ with open("README.md") as f:
 setup(
     PACKAGES=find_packages(where="src"),
     long_description=LONG_DESCRIPTION,
+    long_description_content_type="text/markdown",
     package_dir={"": "src"},
     zip_safe=False,
+    packages=['stay'],
     **meta
 )

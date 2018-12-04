@@ -3,7 +3,7 @@ name: stay
 description: Simple, even Trivial Alternative to Yaml
 license: MIT
 url: https://github.com/amogorkon/stay
-version: 0.1.10
+version: 0.1.10.post1
 author: Anselm Kiefner
 author_email: stay-pypi@anselm.kiefner.de
 
