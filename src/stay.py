@@ -99,6 +99,8 @@ def loads(text: List[str], spaces_per_indent=4):
             
             if l.startswith("\]:::"):
                     l = l[1:]
+            
+            l = l.strip()
 
             # like a matrix
             if l.startswith("[") and l.endswith("]"):

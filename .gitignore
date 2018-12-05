@@ -1,9 +1,9 @@
 src/__pycache__
 .ipynb_checkpoints
 .pytest_cache
-tests/.ipynb_checkpoints
-tests/__pycache__
-tests/test
+test/.ipynb_checkpoints
+test/__pycache__
+test/test
 =======
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -108,4 +108,4 @@ venv.bak/
 /site
 
 # mypy
-.mypy_cache/
+.mypy_cache/test/test
