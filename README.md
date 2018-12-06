@@ -28,7 +28,7 @@ Anything that involves linebreak (\n) characters would need to be manually escap
     :::
  
 ### Long lists
-Similarly, you can make a list of strings where each line is an item:
+Similarly, you can make a list of strings where each line is an item (spaces, newlines and tabs at beginning and end are removed!):
 
 	key:::[
 	a
