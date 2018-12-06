@@ -3,7 +3,8 @@ from shlex import split
 from enum import Enum
 from collections.abc import Iterable
 from typing import Union, Dict, List
-from dataclasses import asdict, dataclass, is_dataclass
+
+
 
 T = Enum("Token", "start key comment long list")
 D = Enum("Directive", "")
@@ -192,19 +193,34 @@ def __process(k, v, level=0, spaces_per_indent=4):
 
     yield l
 
-def dumps(it:Union[Iterable, Dict, dataclass], spaces_per_indent=4):
-    """Process an iterator of dictionaries as SAY documents, without comments."""
-    it = [it] if isinstance(it, dict) else it
-    it = [asdict(it)] if is_dataclass(it) else it
-    
-    assert isinstance(it, Iterable)
-    text = ""
-    
-    for D in it:
-        if is_dataclass(D):
-            D = asdict(D)
-        assert isinstance(D, dict)
-        for k, v in D.items():
-            text += '===\n'.join(__process(k, v))
+import sys
+from packaging import version
+if version.parse(sys.version) not >= version.parse("3.7"):
+    def dumps(it:Union[Iterable, Dict], spaces_per_indent=4):
+        """Process an iterator of dictionaries as SAY documents, without comments."""
+        it = [it] if isinstance(it, dict) else it
+        assert isinstance(it, Iterable)
+        text = ""
+        for D in it:
+            assert isinstance(D, dict)
+            for k, v in D.items():
+                text += '===\n'.join(__process(k, v))
+            return text
+
+else:
+    def dumps(it:Union[Iterable, Dict, dataclass], spaces_per_indent=4):
+        """Process an iterator of dictionaries as SAY documents, without comments."""
+        it = [it] if isinstance(it, dict) else it
+        it = [asdict(it)] if is_dataclass(it) else it
         
-        return text
+        assert isinstance(it, Iterable)
+        text = ""
+        
+        for D in it:
+            if is_dataclass(D):
+                D = asdict(D)
+            assert isinstance(D, dict)
+            for k, v in D.items():
+                text += '===\n'.join(__process(k, v))
+            
+            return text
