@@ -57,6 +57,12 @@ Long values can be used at any point, which ignore the indentation level until e
 ### Directives
 In future, directives - lines starting with ***%*** outside of blocks - can be used to easily extend STAY without interfering with the rest of the syntax, for instance for third party modules, but right now there is no functionality associated.
 
+### Known Limitations
+STAY tries to be simple and *stay* simple, so there are limitations to the syntax that are not easily fixed without blowing the specs out of proportion.
+For instance at this moment it isn't possible to easily implement dictionaries within lists (you could work around that with key-value pairs, but that might be cumbersome),
+also a deeper nesting than lists-in-lists (long list/matrix syntax) is not supported at this moment.
+Feel free to submit ideas on how to lift these limitations by means of syntax (if it doesn't add complexity!) or via directives.
+
 ## Use
 You can load(file) or loads(line-iterator) to read stuff and dumps(dict-iterator) to convert stuff.
 Examples can be found in the Showcase Jupyter Notebook (in /docs) or look at the tests.
