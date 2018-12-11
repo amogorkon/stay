@@ -195,7 +195,7 @@ def __process(k, v, level=0, spaces_per_indent=4):
 
 import sys
 from packaging import version
-if version.parse(sys.version) not >= version.parse("3.7"):
+if not version.parse(sys.version) >= version.parse("3.7"):
     def dumps(it:Union[Iterable, Dict], spaces_per_indent=4):
         """Process an iterator of dictionaries as SAY documents, without comments."""
         it = [it] if isinstance(it, dict) else it
