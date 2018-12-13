@@ -193,21 +193,9 @@ def __process(k, v, level=0, spaces_per_indent=4):
 
     yield l
 
-import sys
-from packaging import version
-if not version.parse(sys.version) >= version.parse("3.7"):
-    def dumps(it:Union[Iterable, Dict], spaces_per_indent=4):
-        """Process an iterator of dictionaries as SAY documents, without comments."""
-        it = [it] if isinstance(it, dict) else it
-        assert isinstance(it, Iterable)
-        text = ""
-        for D in it:
-            assert isinstance(D, dict)
-            for k, v in D.items():
-                text += '===\n'.join(__process(k, v))
-            return text
+try:
+    from dataclasses import is_dataclass, dataclass, asdict
 
-else:
     def dumps(it:Union[Iterable, Dict, dataclass], spaces_per_indent=4):
         """Process an iterator of dictionaries as SAY documents, without comments."""
         it = [it] if isinstance(it, dict) else it
@@ -223,4 +211,16 @@ else:
             for k, v in D.items():
                 text += '===\n'.join(__process(k, v))
             
+            return text
+except:
+    def dumps(it:Union[Iterable, Dict], spaces_per_indent=4):
+        """Process an iterator of dictionaries as SAY documents, without comments."""
+        it = [it] if isinstance(it, dict) else it
+        print(it, type(it))
+        assert isinstance(it, Iterable)
+        text = ""
+        for D in it:
+            assert isinstance(D, dict)
+            for k, v in D.items():
+                text += '===\n'.join(__process(k, v))
             return text
