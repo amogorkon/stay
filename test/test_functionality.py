@@ -1,8 +1,9 @@
 
 import os, sys
 here = os.path.split(os.path.abspath(os.path.dirname(__file__)))
-src = os.path.join(here[0], "src")
-sys.path.append(src)
+src = os.path.join(here[0], "src/stay")
+sys.path.insert(0,src)
+print(sys.path)
 
 from stay import dumps, loads, load
 from pydantic.dataclasses import dataclass
@@ -10,7 +11,7 @@ from typing import List
 from dataclasses import asdict
 
 d = {"2": """asdf\nadsf"""}
-assert d == list(loads(dumps(d).splitlines()))[0]
+assert d == list(loads(dumps(d)))[0]
 
 @dataclass
 class Foo:
@@ -29,3 +30,9 @@ with open("test") as f:
         D2 = asdict(Foo(**x))
 
 assert D1 == D2
+
+def test_string_roundtrip():
+    d = [{"a": '3', "b":'45'}]
+    s = dumps(d)
+    D = list(loads(s))
+    assert d == D

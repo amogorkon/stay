@@ -1,37 +1,38 @@
 
+
+import sys
+
 # importing the sibling folder is not as easy as it should be..
 import os, sys
 here = os.path.split(os.path.abspath(os.path.dirname(__file__)))
-src = os.path.join(here[0], "src")
-sys.path.append(src)
+src = os.path.join(here[0], "src/stay")
+sys.path.insert(0,src)
 
-from hypothesis import given, strategies as st, assume, settings, HealthCheck
-from pytest import fixture, raises
-
-from stay import loads
+from stay import loads, __version__
+print(__version__)
 
 
 def test_docs():
     text = ""
-    assert list(loads(text.splitlines())) == [{}]
+    assert list(loads(text)) == [{}]
     
     text = """
 ===
 ===
 """
-    assert list(loads(text.splitlines())) == [{}, {}, {}]
+    assert list(loads(text)) == [{}, {}, {}]
     
 def test_dict():
     text = """
 a: b
 b: a
 """
-    assert list(loads(text.splitlines())) == [{'a': 'b', 'b': 'a'}]
+    assert list(loads(text)) == [{'a': 'b', 'b': 'a'}]
 
     
 def test_comments():
     text = "# adsf"
-    assert list(loads(text.splitlines())) == [{}]
+    assert list(loads(text)) == [{}]
     
     text = """
 ###
@@ -39,13 +40,13 @@ asdf
 ###
 a: b
 """
-    assert list(loads(text.splitlines())) == [{'a': 'b'}]
+    assert list(loads(text)) == [{'a': 'b'}]
     
     text = """
 ### asdf ###
 a: b
 """
-    assert list(loads(text.splitlines())) == [{'a': 'b'}]
+    assert list(loads(text)) == [{'a': 'b'}]
     
 def test_long():
     text = """
@@ -57,7 +58,7 @@ foo:::
 
 :::   
 """
-    assert list(loads(text.splitlines())) == [{'foo': '1\n2\n3\n\n'}]
+    assert list(loads(text)) == [{'foo': '1\n2\n3\n\n'}]
 
 def test_complex():
     text = """
@@ -69,7 +70,7 @@ name:
 2
 :::    
 """
-    assert list(loads(text.splitlines())) == [{'name': {"family": "adsf", "call": {"foo": "1\n2"}}}]
+    assert list(loads(text)) == [{'name': {"family": "adsf", "call": {"foo": "1\n2"}}}]
     
 def test_list():
     text = """
@@ -81,4 +82,4 @@ matrix:::[
 foo bar
 ]:::
 """
-    assert list(loads(text.splitlines())) == [{"matrix": [['1','2','3'], ['4','5','6'], ['7','8','9'], "foo bar"]}]
+    assert list(loads(text)) == [{"matrix": [['1','2','3'], ['4','5','6'], ['7','8','9'], "foo bar"]}]

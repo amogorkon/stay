@@ -2,8 +2,10 @@
 from shlex import split
 from enum import Enum
 from collections.abc import Iterable
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Iterator
 
+
+__version__ = (0,1,10,7)
 
 
 T = Enum("Token", "start key comment long list")
@@ -33,11 +35,17 @@ class StateMachine:
     def __call__(self):
         return self.state
 
-def load(file):
-    for x in loads(file.readlines()):
-        yield x
+def loads(text):
+    return load(text.splitlines())
 
-def loads(text: List[str], spaces_per_indent=4):   
+def load(it: Iterator[str], spaces_per_indent=4)-> Iterator[Dict]:
+    """
+    >>> d = [{'a': '3', 'b': '45'}]
+    >>> s = dumps(d)
+    >>> list(loads(s))
+    [{'a': '3', 'b': '45'}]
+    """
+
     Parser = StateMachine(states={T.start:{T.long, T.start, T.key, T.comment, T.list},
                                   T.key: {T.long, T.key, T.comment, T.list},
                                   T.long: {T.long, T.start, T.key, T.comment, T.list},
@@ -56,7 +64,9 @@ def loads(text: List[str], spaces_per_indent=4):
         l = l.expandtabs(tabsize=spaces_per_indent)
         return (len(l) - len(l.lstrip()))//spaces_per_indent
     
-    for n, l in enumerate(text):                
+
+
+    for n, l in enumerate(it):
         # long values escape everything, even empty lines
         if (l.isspace() or not l) and Parser() is not T.long:
             continue
@@ -87,7 +97,7 @@ def loads(text: List[str], spaces_per_indent=4):
                 Parser.flux_to(Parser.previous)
             else:
                 # to escape ::: in a long value, everything else already is escaped
-                if l.startswith("\:::"):
+                if l.startswith(r"\:::"):
                     l = l[1:]
                 current_value.append(l.rstrip('\n'))
             continue
@@ -98,7 +108,7 @@ def loads(text: List[str], spaces_per_indent=4):
                 Parser.flux_to(Parser.previous)
                 continue
             
-            if l.startswith("\]:::"):
+            if l.startswith(r"\]:::"):
                     l = l[1:]
             
             l = l.strip()
@@ -196,7 +206,7 @@ def __process(k, v, level=0, spaces_per_indent=4):
 try:
     from dataclasses import is_dataclass, dataclass, asdict
 
-    def dumps(it:Union[Iterable, Dict, dataclass], spaces_per_indent=4):
+    def dumps(it:Union[Iterable, Dict, dataclass], spaces_per_indent=4)->str:
         """Process an iterator of dictionaries as SAY documents, without comments."""
         it = [it] if isinstance(it, dict) else it
         it = [asdict(it)] if is_dataclass(it) else it
@@ -224,3 +234,8 @@ except:
             for k, v in D.items():
                 text += '===\n'.join(__process(k, v))
             return text
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
