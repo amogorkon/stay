@@ -1,3 +1,3 @@
-from .stay import load, loads, dumps
+#from .stay import load, loads, dumps
 
-name = "stay"
+#name = "stay"

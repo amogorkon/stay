@@ -2,240 +2,357 @@
 from shlex import split
 from enum import Enum
 from collections.abc import Iterable
-from typing import Union, Dict, List, Iterator
+from collections import deque
+from functools import partial
+from typing import Union, Dict, List, Sequence, Iterator
+from dataclasses import asdict, dataclass, is_dataclass
+import logging
+from io import TextIOBase
 
 
-__version__ = (0,1,10,7)
+logger = logging.getLogger()
 
 
-T = Enum("Token", "start key comment long list")
-D = Enum("Directive", "")
+T = Enum("Token", "start simple key comment long list dict graph directive")
+D = Enum("Directives", "line key value struct meta")
+
+__version__ = 464
+
+Result = Enum("Result", "drv line")
 
 class ParsingError(Exception):
     pass
 
-class StateMachine:
-    def __init__(self, *, states:dict, initial):       
-        self.states = {}
-        self.states.update(states)
-        self.state = initial
-        self.previous = initial
-    
-    def flux_to(self, to_state):
-        try:
-            if to_state in self.states[self.state]:                
-                self.previous = self.state
-                self.state = to_state
-                return True
-            else:
-                return False
-        except KeyError:
-            return False
-            
-    def __call__(self):
-        return self.state
+class State:
+    def __init__(self, context):
+        self.tokens = deque([T.start])
 
-def loads(text):
-    return load(text.splitlines())
+        # the dictionary to be yielded as one document
+        self.doc = {}
 
-def load(it: Iterator[str], spaces_per_indent=4)-> Iterator[Dict]:
-    """
-    >>> d = [{'a': '3', 'b': '45'}]
-    >>> s = dumps(d)
-    >>> list(loads(s))
-    [{'a': '3', 'b': '45'}]
-    """
+        # dicts of dicts can contain any other datastructure, thus 
+        self.dict_stack = deque()
+        # for lists - maybe unifieable?
+        self.stack = []
+        self.value = []  # Current value in the doc
+        self.key = None  # Current key in the doc
 
-    Parser = StateMachine(states={T.start:{T.long, T.start, T.key, T.comment, T.list},
-                                  T.key: {T.long, T.key, T.comment, T.list},
-                                  T.long: {T.long, T.start, T.key, T.comment, T.list},
-                                  T.list: {T.long, T.start, T.key, T.comment, T.list},
-                                  T.comment: {T.long, T.key, T.comment, T.start, T.list},
-                                 },
-                        initial=T.start)
-    
-    current = {}
-    stack = []
-    current_value = []
-    current_key = None
-    directives = set()
+        self.context = {}  # can be used by directives to manipulate and change content ad hoc
+        # all directives to be executed at certain points, in the order as activated
+        self.directives = {D.line: deque(),
+                            D.key: deque(),
+                            D.value: deque(),
+                            D.struct: deque(),
+                            D.meta: deque()}
 
-    def level(l):
-        l = l.expandtabs(tabsize=spaces_per_indent)
-        return (len(l) - len(l.lstrip()))//spaces_per_indent
-    
+def level(line, spaces_per_indent):
+    line = line.expandtabs(tabsize=spaces_per_indent)
+    return (len(line) - len(line.lstrip()))//spaces_per_indent
 
+def _do_start(n, line, st):
+    return None, None
 
-    for n, l in enumerate(it):
-        # long values escape everything, even empty lines
-        if (l.isspace() or not l) and Parser() is not T.long:
-            continue
-            
-        # a short comment
-        if l.startswith("#"):
-            # long values escape comments
-            if Parser() is T.long:
-                current_value.append(l)
-                continue
-                
-            if l.startswith("###"):
-                # we may have a single "### heading ###"
-                if len(l.split()) > 2 and l.endswith("###"):
-                    continue
-                elif Parser() is not T.comment:
-                    Parser.flux_to(T.comment)
-                else:
-                    Parser.flux_to(Parser.previous)
-            continue
-        
-        if Parser() is T.comment:
-            continue
-        
-        if Parser() is T.long:
-            if l.startswith(":::"):
-                current[current_key] = "\n".join(current_value)
-                Parser.flux_to(Parser.previous)
-            else:
-                # to escape ::: in a long value, everything else already is escaped
-                if l.startswith(r"\:::"):
-                    l = l[1:]
-                current_value.append(l.rstrip('\n'))
-            continue
-        
-        if Parser() is T.list:               
-            if l.startswith("]:::"):
-                current[current_key] = current_value
-                Parser.flux_to(Parser.previous)
-                continue
-            
-            if l.startswith(r"\]:::"):
-                    l = l[1:]
-            
-            l = l.strip()
+def _do_comment(n, line, st):
+    return ..., None
 
-            # like a matrix
-            if l.startswith("[") and l.endswith("]"):
-                l = l[1:-1]
-                l = split(l)
-
-            current_value.append(l)
-            continue
-             
-        # one might use more than 3 for aesthetics
-        if l.startswith("===") or l.startswith("---"):
-            Parser.flux_to(T.start)
-            yield current
-            current = {}
-            continue
-        
-        if l.startswith("%"):
-            D = split(l[1:])
-            for x in D:
-                if x.startswith("+"):
-                    try:
-                        d = getattr(D, x[1:])
-                        directives.add(d)
-                    except AttributeError:
-                        raise ParsingError(f"No such directive: {x} (line {n})")
-                elif d.startswith("-"):
-                    try:
-                        d = getattr(D, x[1:])
-                        directives.discard(d)
-                    except AttributeError:
-                        raise ParsingError(f"No such directive: {x} (line {n})")
-            continue
-        
-        k, _, v = l.partition(":")
-        k, v = k.strip(), v.strip()
-        
-        if v == "::":
-            Parser.flux_to(T.long)
-            current_value = []
-            current_key = k.strip()
-            continue
-        
-        if v == "::[":
-            Parser.flux_to(T.list)
-            current_value = []
-            current_key = k.strip()
-            continue
-        
-        for x in range(abs(level(l) - len(stack))):
-                prev, prev_k = stack.pop()
-                prev[prev_k] = current
-                current = prev
-        
-        if v == "":
-            stack.append((current, k))
-            current = {}
-        else:
-            # this implements a list of values, just use "[1 2 3 'foo bar' baz]" to get [1,2,3, "foo bar", baz]
-            if v.startswith("[") and v.endswith("]"):
-                v = v[1:-1]
-                v = split(v)
-            
-            # simple values
-            current[k] = v
-    
-    for _ in range(len(stack)):
-        prev, prev_k = stack.pop()
-        prev[prev_k] = current
-        current = prev
-
-    yield current
-    
-def __process(k, v, level=0, spaces_per_indent=4):
-    if not isinstance(v, Iterable) or (isinstance(v, str) and "\n" not in v):
-        l = f"{' ' * level * spaces_per_indent}{k}: {v}\n"
-
-    elif isinstance(v, str) and "\n" in v:
-        l = f"{' ' * level * spaces_per_indent}{k}:::\n{v}\n:::\n"
-
-    elif isinstance(v, Iterable) and not isinstance(v, dict):
-        l = f"{' ' * level * spaces_per_indent}{k}: [{' '.join(str(x) for x in v)}]\n"
-
-    elif isinstance(v, dict):
-        l = f"{' ' * level * spaces_per_indent}{k}:\n"
-        for k, v in v.items():
-            l += '\n'.join(str(x) for x in __process(k, v, level=level+1))
+def _do_long(n, line, st):
+    if line.startswith(":::"):
+        return st.tokens.pop(), "\n".join(st.value)
     else:
-        raise UserWarning
+        st.value.append(line)
+        return ..., None
 
-    yield l
+def _do_list(n, line, st):
+    line = line.strip()
 
-try:
-    from dataclasses import is_dataclass, dataclass, asdict
+    if line.startswith("]"):
+        token = st.tokens.pop()
+        if st.tokens[-1] is not T.list:
+            return token, tuple(st.stack)
+        else:
+            p = st.stack.pop()
+            st.stack[0] =  tuple(p)
+            return ..., None
+    
+    if line.startswith(r"\]"):
+        line = line[1:]
+    
+    if line == "":
+        return ..., None
 
-    def dumps(it:Union[Iterable, Dict, dataclass], spaces_per_indent=4)->str:
-        """Process an iterator of dictionaries as SAY documents, without comments."""
+    # like a matrix, for instance
+    if line.startswith("[") and line.endswith("]"):
+        line = line[1:-1]
+        st.stack.append(tuple(split(line)))
+        return ..., None
+
+    if line.endswith(":::["):
+        st.tokens.append(T.list)
+        st.stack.append([])
+        print(st.stack)
+        return ..., None
+
+    st.stack.append(line)
+    return ..., None
+
+def _do_dicts(n, line, st):
+    if line.startswith("}"):
+        return st.tokens.pop(), st.value
+    else:
+        if line.startswith(r"\}"):
+            line = line[1:]
+        line = line.strip()
+        st.value.append(line)
+        return ..., None
+
+def _do_graph(n, line, st):
+    return ..., None
+
+def _do_directive(n, line, st):
+    if line.startswith(">"):
+        return st.tokens.pop(), partial(st.key, *st.value)
+    else:
+        st.value.append(line)
+        return ..., None
+
+def _check_and_add_drv(drv, directives, st_directives):
+    if drv in directives:
+        st_directives.append(directives[drv](self.lines, st, args))
+
+class Decoder:
+    def __init__(self, commands=None, 
+                    meta_directives=None,
+                    line_directives=None,
+                    value_directives=None, 
+                    key_directives=None,
+                    struct_directives=None,
+                    default_context=None,
+                    custom_cases=None):
+
+        self.commands = commands if commands else {}
+        self.directives = {
+                            D.line: line_directives if line_directives else {},
+                            D.key: key_directives if key_directives else {},
+                            D.value: value_directives if value_directives else {},
+                            D.struct: struct_directives if struct_directives else {},
+                            D.meta: meta_directives if meta_directives else {},
+                            }
+        self.default_context = default_context if default_context else {}
+        self.custom_cases = custom_cases if custom_cases else {}
+
+    def __call__(self, lines:Iterator[str], spaces_per_indent=4) -> Iterator[dict]:       
+        if isinstance(lines, TextIOBase):
+            lines = lines.readlines()
+
+        if not lines:
+            return []
+
+        if isinstance(lines, str):
+            lines = lines.splitlines()
+        
+        st = State(self.default_context)
+        
+        cases = {T.comment: _do_comment,
+                T.long: _do_long,
+                T.list: _do_list,
+                T.dict: _do_dicts,
+                T.graph: _do_graph,
+                T.start: _do_start,
+                T.directive: _do_directive,
+                }
+
+        cases.update(self.custom_cases)
+
+        for n, line in enumerate(lines):
+            # commands
+            if line.startswith("%"):
+                parts = [p.strip() for p in line[1:].split("%")]
+                if not parts[-1]:
+                    raise ParsingError("% denotes the start of a new command, alas none given.")
+                
+                result = None
+                for p in parts:
+                    cmd, *args = split(p)
+                    try:
+                        result = self.commands[cmd](result, *args, 
+                            lines=lines, n=n, decoder=self, state=st, cases=cases)
+                    except KeyError as e:
+                        raise ParsingError("command %s not defined for this Decoder." % (cmd))
+
+                logger.info(line)
+                continue
+
+            # directives
+            if line.startswith("</"):
+                end = None if (x := line.find(">")) == -1 else x
+                name, *parts = split(line[2:end])
+
+                for DD, F in self.directives.items():
+                    if name in F:
+                        st.directives[DD].remove(F[name])
+                continue
+
+            if line.startswith("<"):
+                # allows normal comments after closing
+                end = None if (x := line.find(">")) == -1 else x
+                name, *args = split(line[1:end])
+                for f in self.directives[D.meta].values():
+                    name, *args = f(name, *args, decoder=self, state=st, lines=lines, n=n)
+
+                for DD, F in self.directives.items():
+                    if name in F:
+                        st.directives[DD].appendleft(F[name])
+                if ">" in line:
+                    continue
+                else:
+                    st.tokens.append(T.directive)
+                    st.key = DD
+                    continue
+            
+            for f in st.directives[D.line]:
+                line = f(line)
+
+            # a short comment
+            if line.startswith("#"):
+                # long values escape comments
+                if st.tokens[-1] is T.long:
+                    st.value.append(line)
+                
+                if line.startswith("###"):
+                    # we may have a single "### heading ###"
+                    if len(parts := line.split()) > 1 and parts[-1] == "###":
+                        pass
+                    elif st.tokens[-1] is not T.comment:
+                        st.tokens.append(T.comment)
+                    else:
+                        st.tokens.pop()
+                continue
+
+            token, data = cases[st.tokens[-1]](n, line, st)
+
+            if token is ...:
+                continue
+
+            if token is T.directive:
+                DD = st.key
+                st.directives[DD].appendleft(data)
+                continue
+            
+            if data is not None:
+                for f in st.directives[D.struct]:
+                    data = f(token, data)
+                st.doc[st.key] = data
+                continue
+
+            if (line.isspace() or not line):
+                continue
+
+            # one might use more than 3 for aesthetics
+            if line.startswith("===") or line.startswith("---"):
+                if st.tokens[-1] is T.key:
+                    raise ParsingError(f"Key {st.key} but no value given.")
+                if len(st.tokens) > 1:
+                    raise ParsingError(f"Syntax error? Stack: {st.tokens}")
+                yield st.doc
+                st.doc = {}
+                continue
+
+            k, _, v = line.partition(":")
+            for f in st.directives[D.key]:
+                k = f(k)
+
+            if k.endswith('"'):
+                k = k[:-1].leftstrip()
+            else:
+                k = k.strip()
+
+            # need to add a leading " if spaces must not be ignored
+
+            for f in st.directives[D.value]:
+                v = f(v)
+
+            if v.startswith('"'):
+                v = v[1:]
+            else:
+                v = v.strip()
+            
+            if v == "::":
+                st.tokens.append(T.long)
+                st.value = []
+                st.key = k.strip()
+                continue
+            
+            if v == "::[":
+                st.tokens.append(T.list)
+                st.key = k.strip()
+                st.stack = []
+                continue
+
+            if v == "::{":
+                st.tokens.append(T.graph)
+                st.value = {}
+                st.key = k.strip()
+                continue
+            
+            for x in range(abs(level(line, spaces_per_indent) - len(st.dict_stack))):
+                prev, prev_k = st.dict_stack.pop()
+                prev[prev_k] = st.doc
+                st.doc = prev
+
+            if v == "":
+                st.dict_stack.append((st.doc, k))
+                st.doc = {}
+            else:
+                # this implements a list of values, just use "[1 2 3 'foo bar' baz]" to get ['1','2','3', "foo bar", 'baz']
+                if v.startswith("[") and v.endswith("]"):
+                    v = v[1:-1]
+                    v = split(v)
+                    token = T.list
+                else:
+                    # everything else are simple values
+                    token = T.simple
+
+                for f in st.directives[D.struct]:
+                    v = f(token, v)
+                st.doc[k] = v
+
+        for _ in range(len(st.dict_stack)):
+            prev, prev_k = st.dict_stack.pop()
+            prev[prev_k] = st.doc
+            st.doc = prev
+
+        yield st.doc
+
+
+class Encoder:
+    def __call__(self, it:Union[Iterable, Dict, dataclass], spaces_per_indent=4):
+        """Process an iterator of dictionaries as STAY documents, without comments.
+        On second thought, it would be cool to auto-add comments, making the file self-documenting.
+        """
         it = [it] if isinstance(it, dict) else it
         it = [asdict(it)] if is_dataclass(it) else it
         
-        assert isinstance(it, Iterable)
-        text = ""
+        output = "===\n".join(self.__process(asdict(D) if is_dataclass(D) else D) for D in it)
+        return output
+
+    def __process(self, D:dict, level=0, spaces_per_indent=4):
+        def do(k, v):
+            if not isinstance(v, Iterable) or (isinstance(v, str) and "\n" not in v):
+                line = f"{' ' * level * spaces_per_indent}{k}: {v}\n"
+
+            elif isinstance(v, str) and "\n" in v:
+                line = f"{' ' * level * spaces_per_indent}{k}:::\n{v}\n:::\n"
+
+            elif isinstance(v, Iterable) and not isinstance(v, dict):
+                line = f"{' ' * level * spaces_per_indent}{k}: [{' '.join(str(x) for x in v)}]\n"
+
+            elif isinstance(v, dict):
+                line = f"{' ' * level * spaces_per_indent}{k}:\n"
+                for k, v in v.items():
+                    line += '\n'.join(str(x) for x in __process(k, v, level=level+1))
+            else:
+                raise UserWarning
+            return line
         
-        for D in it:
-            if is_dataclass(D):
-                D = asdict(D)
-            assert isinstance(D, dict)
-            for k, v in D.items():
-                text += '===\n'.join(__process(k, v))
-            
-            return text
-except:
-    def dumps(it:Union[Iterable, Dict], spaces_per_indent=4):
-        """Process an iterator of dictionaries as SAY documents, without comments."""
-        it = [it] if isinstance(it, dict) else it
-        print(it, type(it))
-        assert isinstance(it, Iterable)
-        text = ""
-        for D in it:
-            assert isinstance(D, dict)
-            for k, v in D.items():
-                text += '===\n'.join(__process(k, v))
-            return text
-
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+        text = ''.join(do(k, v) for k, v in D.items())
+        return text
