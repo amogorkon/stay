@@ -89,7 +89,6 @@ def _do_list(n, line, st):
     if line.endswith(":::["):
         st.tokens.append(T.list)
         st.stack.append([])
-        print(st.stack)
         return ..., None
 
     st.stack.append(line)
