@@ -24,7 +24,7 @@ STAY is line-based. The file is read line by line, translated into a generator o
 ### Documents
 A document represents a basic dictionary. Documents are the basic units that are yielded from the STAY parser. In text form, a document is seperated from the next by a line that starts with **===** or **---**. For instance, in a configuration this allows defaults on top of the file, user-defined values below, which overwrite the default. The seperator may also be used as a headline like **=== this is the next chapter**.
 
-### Simple values
+### Simple Values
 In a document, simple key/value pairs are written like **key: value** on a single line. Leading and trailing whitespace is stripped. If whitespace is meaningful around key or value, you can signify that with a ***"*** on either or both sides, directly adjacent of the ***:*** and its partner around the key/value.
 
     "  foo   ":"    bar     "
@@ -73,18 +73,18 @@ However, unlike long values, long lists also work with the list syntax, so you c
 	]
     
 ### Graph blocks
-In some cases, 
-I took inspiration from the DOT language - in fact, graph blocks are valid DOT and can easily be parsed as such with a given directive.
-This requires a directive because there are so many different ways  to represent the graph as a datastructure and many different libraries for this purpose.
-On first glance there is no difference to pure text blocks, but with an active directive, graph blocks can easily be handled separately.
+For graph blocks braces are used like in the DOT language.
+However, unlike other data structures, graph blocks only exist in STAY as abstract syntax that require a directive for implementation. This is because there are many different ways a graph can be represented and many different libraries for this purpose.
+While this seems like a backdraw at first, it also leaves the freedom to use {} blocks for other purposes, like directives to implement list of dicts or more exotic datastructures.
 
 A graph block is signified with a ***:::{*** and ends with a ***}***. The end signifier allows the same annotation as all the other blocks, so that
 
-    graph:::{
+	<DOTgraph>
+    name:::{
     a -> b -> c
     }:::graph
     
-is valid syntax.
+is valid syntax. While it may seem strange to have "blank" syntax with no specific meaning, I think it will be much more useful to have one explicit wildcase than to have to change the behaviour of established syntax case by case, which is more work and more confusing for the user.
 
 ## Modifying behaviour
 While all STAY documents MUST follow the language specification for interoperability, a document also can include statements that a parser MAY follow, but has no obligation to. In the contrary, it is advised to start with a bare parser and only add functionality that is required to properly handle a given document. Since it is possible to change all of the internal machinery of the parser and adding arbitrary functionality, there is a considerable risk of a security breach if unnecessary functionality is added and exploited in a document by an untrusted source. All additional functionality that modifies parser behaviour are called 'directives'.

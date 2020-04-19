@@ -10,7 +10,7 @@ setup(
 	description="Simple, even Trivial Alternative to Yaml",
 	license="MIT",
 	url="https://github.com/amogorkon/stay",
-	version="0.3.2",
+	version="0.3.2post3",
 	author="Anselm Kiefner",
 	author_email="stay-pypi@anselm.kiefner.de",
 	python_requires=">3.6",
