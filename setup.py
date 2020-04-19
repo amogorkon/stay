@@ -13,7 +13,7 @@ setup(
 	version="0.3.2",
 	author="Anselm Kiefner",
 	author_email="stay-pypi@anselm.kiefner.de",
-	python_requires=">3.7",
+	python_requires=">3.6",
 	keywords=["json", "yaml", "toml", "config", "simple", "alternative"],
 	classifiers=[
 	"Development Status :: 4 - Beta",
