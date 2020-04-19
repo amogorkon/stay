@@ -183,7 +183,7 @@ class Decoder:
 
             # directives
             if line.startswith("</"):
-                x = line.find(">"):
+                x = line.find(">")
                 if x == -1:
                     end = None
                 else:
