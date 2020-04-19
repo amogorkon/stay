@@ -183,7 +183,11 @@ class Decoder:
 
             # directives
             if line.startswith("</"):
-                end = None if (x := line.find(">")) == -1 else x
+                x = line.find(">"):
+                if x == -1:
+                    end = None
+                else:
+                    end = x
                 name, *parts = split(line[2:end])
 
                 for DD, F in self.directives.items():
@@ -193,7 +197,11 @@ class Decoder:
 
             if line.startswith("<"):
                 # allows normal comments after closing
-                end = None if (x := line.find(">")) == -1 else x
+                x = line.find(">")
+                if x == -1:
+                    end = None
+                else:
+                    end = x
                 name, *args = split(line[1:end])
                 for f in self.directives[D.meta].values():
                     name, *args = f(name, *args, decoder=self, state=st, lines=lines, n=n)
@@ -219,7 +227,8 @@ class Decoder:
                 
                 if line.startswith("###"):
                     # we may have a single "### heading ###"
-                    if len(parts := line.split()) > 1 and parts[-1] == "###":
+                    parts = line.split()
+                    if len(parts) > 1 and parts[-1] == "###":
                         pass
                     elif st.tokens[-1] is not T.comment:
                         st.tokens.append(T.comment)
