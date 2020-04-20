@@ -117,7 +117,7 @@ overwrites the default cases for this instance.
 ### Directives
 While commands only operate on single lines, it is possible to define **directives** (or environments or contexts, however you want to call them), which are functions the parser applies to everything it operates on beyond the activation. The simplest form of directive is a global one on a single line, after having passed in the function to the Decoder class:
 
-	decode = Decoder(line_directives={"comments": lambda line: line.split("#")[0])})
+	decode = Decoder(line_directives={"comments": drv.inline_comments)})
 
 which enables the user to activate the function within the document like so
 
@@ -142,13 +142,13 @@ It is important to note that the < > are mandatory to clearly identify the part 
 
 which, if "replace" is defined accordingly, could instruct the parser to replace all "a"s with "b"s and so on, from this point on.
 
-Depending on whether the function has been defined as valid line, key, value or struct directive, the function only gets access to this particular data.
+Depending on whether the function has been defined as line, key, value or struct directive, the function only gets access to this particular data.
 If the same function is passed as key and value directive in the definition of the Parser, it would be called for both steps - key and value construction, replacing letters indiscrimantly.
 However, if different functions were passed under the same "replace" tag to the Parser in the beginning as key and value directives, special cases for either keys or values can be handled more elegantly.
 
 For instance, you can have only for keys or for values. For this, you start similar like above:
 
-	decode = Decoder(key_directives={"comments": lambda s: s.split("#")[0]})
+	decode = Decoder(key_directives={"comments": drv.inline_comments})
 
 which is basically the same code, just "line_directive" replaced by "key_directive". Now you can have a document like so
 
@@ -157,15 +157,15 @@ which is basically the same code, just "line_directive" replaced by "key_directi
 
 And even both, key and value:
 
-	decode = Decoder(key_directives={"comments": lambda s: s.split("#")[0]},
-					value_directives={"comments": lambda s: s.split("#")[0]})
+	decode = Decoder(key_directives={"comments": drv.inline_comments},
+					value_directives={"comments": drv.inline_comments})
 
 which allows the following:
 
 	<comments>
 	strange name for a key # explanation : strange value # explanation
 
-Another included directive is context, which works pretty much like the one in JSON-LD:
+Another useful directive can be 'context', which works pretty much like in JSON-LD:
 
 	import stay.directives as drv
 	load = Decoder(key_directives={"context"=drv.context})
@@ -178,6 +178,7 @@ Another included directive is context, which works pretty much like the one in J
 	>
 	d: hello
 	"""
+	load(s)
 
 Context creates an internal dictionary that first replaces leading {str}: of the values by previous occurance as key, then replaces all keys in the actual document by the values in the context.
 This is useful to use shorthand in the document while the actual key can be an arbitrarily complex url.
@@ -201,7 +202,7 @@ With the current implementation it isn't possible to make arbitrary lists of lis
 First you need to build a decoder instance - functions to take care of special directives need to be passed in explicitely, which should be no issue to begin with. The instance can be called directly to 
 	
 	from stay import Decoder
-
+	
 	decode = Decoder()
 
 	with open(somefilename) as file:
