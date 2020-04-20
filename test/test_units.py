@@ -77,7 +77,7 @@ a: b
 
 
 def test_line_comments():
-    comments = lambda line: line.split("#")[0]
+    comments = lambda *args: lambda line: line.split("#")[0]
     decode = Decoder(line_directives={"comments": comments})
     s = """
 a: 28 # adsf
@@ -98,7 +98,7 @@ c: 30 # fdad
                             }]
 
 def test_key_comments():
-    comments = lambda s: s.split("#")[0]
+    comments = lambda *args: lambda s: s.split("#")[0]
     decode = Decoder(key_directives={"comments": comments})
     
     s = """
@@ -108,7 +108,7 @@ strange # explanation : value
     assert list(decode(s)) == [{"strange": "value"}]
 
 def test_key_value_comments():
-    comments = lambda s: s.split("#")[0]
+    comments = lambda *args: lambda s: s.split("#")[0]
     decode = Decoder(key_directives={"comments": comments},
                     value_directives={"comments": comments})
 
@@ -259,8 +259,7 @@ b: 3
 
 
 def test_short_list_to_set_struct():
-    list_to_set = lambda token, struct: set(struct)
-    decode = Decoder(struct_directives={"list_to_set": list_to_set})
+    decode = Decoder(struct_directives={"list_to_set": drv.list_to_set})
 
     s = """
 <list_to_set>
@@ -269,8 +268,7 @@ set: [1 2 2 3]
     assert list(decode(s)) == [{"set": set(["1", "2", "3"])}]
 
 def test_list_to_set_struct():
-    list_to_set = lambda token, struct: set(struct)
-    decode = Decoder(struct_directives={"list_to_set": list_to_set})
+    decode = Decoder(struct_directives={"list_to_set": drv.list_to_set})
 
     s = """
 <list_to_set>
@@ -282,3 +280,26 @@ set:::[
 ]
 """
     assert list(decode(s)) == [{"set": set(["1", "2", "3"])}]
+
+def test_context():
+    decode = Decoder(key_directives ={"context":drv.context})
+
+    s = """
+<context
+nc: http://release.niem.gov/niem/niem-core/4.0/#
+age: nc:PersonAgeMeasure
+name: nc:PersonName
+given: nc:PersonGivenName
+surname: PersonSurName
+nickname: PersonPreferredName
+>
+age: 14
+given: Mortimer
+surname: Smith
+nickname: Morty
+"""
+    assert list(decode(s)) == [{"http://release.niem.gov/niem/niem-core/4.0/#PersonAgeMeasure": "14",
+                                "http://release.niem.gov/niem/niem-core/4.0/#PersonGivenName": "Mortimer",
+                                "PersonSurName": "Smith",
+                                "PersonPreferredName": "Morty"
+                                }]

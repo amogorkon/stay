@@ -39,11 +39,11 @@ class State:
 
         self.context = {}  # can be used by directives to manipulate and change content ad hoc
         # all directives to be executed at certain points, in the order as activated
-        self.directives = {D.line: deque(),
-                            D.key: deque(),
-                            D.value: deque(),
-                            D.struct: deque(),
-                            D.meta: deque()}
+        self.directives = {D.line: {},
+                            D.key: {},
+                            D.value: {},
+                            D.struct: {},
+                            D.meta: {}}
 
 def level(line, spaces_per_indent):
     line = line.expandtabs(tabsize=spaces_per_indent)
@@ -109,14 +109,10 @@ def _do_graph(n, line, st):
 
 def _do_directive(n, line, st):
     if line.startswith(">"):
-        return st.tokens.pop(), partial(st.key, *st.value)
+        return st.tokens.pop(), None
     else:
         st.value.append(line)
         return ..., None
-
-def _check_and_add_drv(drv, directives, st_directives):
-    if drv in directives:
-        st_directives.append(directives[drv](self.lines, st, args))
 
 class Decoder:
     def __init__(self, commands=None, 
@@ -192,7 +188,7 @@ class Decoder:
 
                 for DD, F in self.directives.items():
                     if name in F:
-                        st.directives[DD].remove(F[name])
+                        del st.directives[DD][name]
                 continue
 
             if line.startswith("<"):
@@ -203,20 +199,21 @@ class Decoder:
                 else:
                     end = x
                 name, *args = split(line[1:end])
-                for f in self.directives[D.meta].values():
-                    name, *args = f(name, *args, decoder=self, state=st, lines=lines, n=n)
 
-                for DD, F in self.directives.items():
-                    if name in F:
-                        st.directives[DD].appendleft(F[name])
-                if ">" in line:
-                    continue
+                if not any(name in d for d in self.directives.values()):
+                    logger.info(name, "not specified as any viable directive.")
+                else:
+                    st.key = [(DD, name, F[name], args)
+                            for DD, F in self.directives.items() if name in F]
+                if end:
+                    for DD, name, f, args in st.key:
+                        st.directives[DD][name] = f(*args)
                 else:
                     st.tokens.append(T.directive)
-                    st.key = DD
-                    continue
+                    st.value = []
+                continue
             
-            for f in st.directives[D.line]:
+            for f in st.directives[D.line].values():
                 line = f(line)
 
             # a short comment
@@ -238,16 +235,16 @@ class Decoder:
 
             token, data = cases[st.tokens[-1]](n, line, st)
 
-            if token is ...:
+            if token is T.directive:
+                for DD, name, f, args in st.key:
+                    st.directives[DD][name] = f(*args, s=st.value)
                 continue
 
-            if token is T.directive:
-                DD = st.key
-                st.directives[DD].appendleft(data)
+            if token is ...:
                 continue
             
             if data is not None:
-                for f in st.directives[D.struct]:
+                for f in st.directives[D.struct].values():
                     data = f(token, data)
                 st.doc[st.key] = data
                 continue
@@ -266,7 +263,7 @@ class Decoder:
                 continue
 
             k, _, v = line.partition(":")
-            for f in st.directives[D.key]:
+            for f in st.directives[D.key].values():
                 k = f(k)
 
             if k.endswith('"'):
@@ -276,7 +273,7 @@ class Decoder:
 
             # need to add a leading " if spaces must not be ignored
 
-            for f in st.directives[D.value]:
+            for f in st.directives[D.value].values():
                 v = f(v)
 
             if v.startswith('"'):
@@ -320,7 +317,7 @@ class Decoder:
                     # everything else are simple values
                     token = T.simple
 
-                for f in st.directives[D.struct]:
+                for f in st.directives[D.struct].values():
                     v = f(token, v)
                 st.doc[k] = v
 

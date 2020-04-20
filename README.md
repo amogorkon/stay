@@ -165,10 +165,30 @@ which allows the following:
 	<comments>
 	strange name for a key # explanation : strange value # explanation
 
+Another included directive is context, which works pretty much like the one in JSON-LD:
+
+	import stay.directives as drv
+	load = Decoder(key_directives={"context"=drv.context})
+	s = """
+	<context
+	g: http://google.de
+	a: /foobar/
+	c: a:baz
+	d: g:a
+	>
+	d: hello
+	"""
+
+Context creates an internal dictionary that first replaces leading {str}: of the values by previous occurance as key, then replaces all keys in the actual document by the values in the context.
+This is useful to use shorthand in the document while the actual key can be an arbitrarily complex url.
+
 
 ### Meta-Directives
 Finally, it is possible to check and alter directives and their arguments before they are executed.
 This can be done for instance to ensure backwards-compatibility if changes were made to directives or to check for security issues before a directive is executed.
+
+
+
 
 ### Known Limitations
 With the current implementation it isn't possible to make arbitrary lists of lists and lists of dicts/other structures. It is also not possible to use a list/tuple as key.
