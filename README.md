@@ -146,7 +146,7 @@ Depending on whether the function has been defined as line, key, value or struct
 If the same function is passed as key and value directive in the definition of the Parser, it would be called for both steps - key and value construction, replacing letters indiscrimantly.
 However, if different functions were passed under the same "replace" tag to the Parser in the beginning as key and value directives, special cases for either keys or values can be handled more elegantly.
 
-For instance, you can have only for keys or for values. For this, you start similar like above:
+For instance, you can have comments only for keys or for values. For this, you start similar like above:
 
 	decode = Decoder(key_directives={"comments": drv.inline_comments})
 
@@ -171,17 +171,19 @@ Another useful directive can be 'context', which works pretty much like in JSON-
 	load = Decoder(key_directives={"context"=drv.context})
 	s = """
 	<context
-	g: http://google.de
+	g: http://google.de/
 	a: /foobar/
 	c: a:baz
-	d: g:a
+	d: g:test
 	>
 	d: hello
 	"""
 	load(s)
 
-Context creates an internal dictionary that first replaces leading {str}: of the values by previous occurance as key, then replaces all keys in the actual document by the values in the context.
-This is useful to use shorthand in the document while the actual key can be an arbitrarily complex url.
+which would result in the dictionary {"http://google.de/test": "hello"}
+
+Context creates an internal dictionary that first replaces leading '{str}:' of the values by previous occurance of the key, then replaces all keys in the actual document by the values in the context.
+This is useful to use shorthand in the document while the actual key can be an arbitrarily complex url or other composite.
 
 If there is any need for self-documented datatypes within a document, it can easily be done with a directive like inline_spec which maps arbitrary specifiers to conversion functions.
 This can be extended to any number of datatypes, including numpy or ctypes.
