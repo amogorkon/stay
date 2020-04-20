@@ -74,17 +74,17 @@ However, unlike long values, long lists also work with the list syntax, so you c
     
 ### Graph blocks
 For graph blocks braces are used like in the DOT language.
-However, unlike other data structures, graph blocks only exist in STAY as abstract syntax that require a directive for implementation. This is because there are many different ways a graph can be represented and many different libraries for this purpose.
+However, unlike other data structures, graph blocks only exist in STAY as abstract syntax that require a directive for implementation. This is because there are many different ways a graph can be represented and many different libraries exist for this purpose.
 While this seems like a backdraw at first, it also leaves the freedom to use {} blocks for other purposes, like directives to implement list of dicts or more exotic datastructures.
 
-A graph block is signified with a ***:::{*** and ends with a ***}***. The end signifier allows the same annotation as all the other blocks, so that
+A graph block works as a block with { and }. The end } signifier allows the same annotation as all the other blocks, so that
 
 	<DOTgraph>
-    name:::{
+    graph name:::{
     a -> b -> c
     }:::graph
     
-is valid syntax. While it may seem strange to have "blank" syntax with no specific meaning, I think it will be much more useful to have one explicit wildcase than to have to change the behaviour of established syntax case by case, which is more work and more confusing for the user.
+is valid syntax with the ":::graph" as an optional comment. While it may seem strange to have "blank" syntax with no specific meaning, I think it will be much more useful to have one explicit wildcase than to have to change the behaviour of established syntax case by case, which is more work and more confusing for the user.
 
 ## Modifying behaviour
 While all STAY documents MUST follow the language specification for interoperability, a document also can include statements that a parser MAY follow, but has no obligation to. In the contrary, it is advised to start with a bare parser and only add functionality that is required to properly handle a given document. Since it is possible to change all of the internal machinery of the parser and adding arbitrary functionality, there is a considerable risk of a security breach if unnecessary functionality is added and exploited in a document by an untrusted source. All additional functionality that modifies parser behaviour are called 'directives'.
@@ -105,8 +105,8 @@ making the following a valid expression:
 
 inserting the content of the file "include-test" at the line currently being parsed.
 Be aware that if the exact same line is part of the file being inserted, this will result in a recursion and possibly an infinite loop!
-However, if include has not been passed into the Parser as valid command, only an error may be logged while the content of the file is still valid for parsers without the command. 
-Multiple commands also can be concatenated (piped) with the results of the first passed into the next:
+However, if include has not been passed into the Parser as valid command, only an error may be logged while the rest of the content of the file is still valid for all intents and purposes. 
+Multiple commands also can be concatenated (piped) with the results of the first passed into the next as input:
 
 	% cmd1 args11 args12 % cmd2 args21 args 22
 
@@ -205,14 +205,14 @@ First you need to build a decoder instance - functions to take care of special d
 	
 	from stay import Decoder
 	
-	decode = Decoder()
+	load = Decoder()
 
 	with open(somefilename) as file:
-		list(decode(file))
+		list(load(file))
 
 
-You can decode(file, text or lines) to read stuff and encode(dict-iterator) to convert stuff into a STAY iterator of documents.
-Examples can be found in the Showcase Jupyter Notebook (in /docs) or look at the tests.
+This can be used to read a STAY file, while the Encoder can be used to convert an iterator of dictionaries into a STAY generator of documents.
+Examples can be found in the Showcase Jupyter Notebook (in /docs) or by looking at the tests.
 
 ***That's it - enjoy!***
 
