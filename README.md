@@ -182,6 +182,9 @@ Another included directive is context, which works pretty much like the one in J
 Context creates an internal dictionary that first replaces leading {str}: of the values by previous occurance as key, then replaces all keys in the actual document by the values in the context.
 This is useful to use shorthand in the document while the actual key can be an arbitrarily complex url.
 
+If there is any need for self-documented datatypes within a document, it can easily be done with a directive like inline_spec which maps arbitrary specifiers to conversion functions.
+This can be extended to any number of datatypes, including numpy or ctypes.
+
 
 ### Meta-Directives
 Finally, it is possible to check and alter directives and their arguments before they are executed.

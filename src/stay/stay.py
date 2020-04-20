@@ -206,8 +206,11 @@ class Decoder:
                     st.key = [(DD, name, F[name], args)
                             for DD, F in self.directives.items() if name in F]
                 if end:
-                    for DD, name, f, args in st.key:
-                        st.directives[DD][name] = f(*args)
+                    try:
+                        for DD, name, f, args in st.key:
+                            st.directives[DD][name] = f(*args)
+                    except TypeError as e:
+                        logger.error("Sure the directives are correctly specified in the Decoder?", e)
                 else:
                     st.tokens.append(T.directive)
                     st.value = []
@@ -266,15 +269,20 @@ class Decoder:
             for f in st.directives[D.key].values():
                 k = f(k)
 
-            if k.endswith('"'):
-                k = k[:-1].leftstrip()
-            else:
-                k = k.strip()
+            if isinstance(k, str):
+                if k.endswith('"'):
+                    k = k[:-1].leftstrip()
+                else:
+                    k = k.strip()
 
             # need to add a leading " if spaces must not be ignored
 
             for f in st.directives[D.value].values():
                 v = f(v)
+            
+            if not isinstance(v, str):
+                st.doc[k] = v
+                continue
 
             if v.startswith('"'):
                 v = v[1:]
