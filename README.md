@@ -47,10 +47,10 @@ Comments are line-based. Any line that starts with # is ignored. Additionally, a
 ### Long values = text blocks
 Anything that involves linebreak (\n) characters would need to be manually escaped, but there is a simple solution to that: long values. A key: with **:::** instead of : will start a block of long value, where everything is escaped until a single line starting with triple colons (if inside the block, it can be manually escaped by \\:::, which is the only exception, everything else is parsed as-is).
  
-   key:::
-long
-value
-:::
+	key:::
+	long
+	value
+	:::
 
 Within a block, you can ignore any outside indentation level. 
 This is useful to store long text passages that can be copy&pasted with no modification. Please note that the end-block signifier also acts as comment, allowing to mirror the block header or add meta-data that may be used in a directive. Mirroring the block header hardly seems useful in a small example (which is why it isn't enforced by code), however if the block is very large it can be a big help since it is no problem to search for ":::key".
