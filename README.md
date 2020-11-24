@@ -172,8 +172,6 @@ Another useful directive can be 'context', which works pretty much like in JSON-
 	s = """
 	<context
 	g: http://google.de/
-	a: /foobar/
-	c: a:baz
 	d: g:test
 	>
 	d: hello
