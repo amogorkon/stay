@@ -184,18 +184,20 @@ foo bar
                                              ('7','8','9'), 
                                              "foo bar")}]
 
+    text = """
+list of lists: [1 2 [3 4] []]
+"""
+    #assert list(decode(text)) == [{"list of lists": ["1", "2", ["3", "4"], []]}]
 
 @skip
 def test_empty_list_of_lists(decode):
     s = """
 list of lists:::[
-:::[
-:::[
-]
-]
+[[] [[]]]
+[]
 ]
 """
-    assert list(decode(s)) == [{"list of lists": (((),),)}]
+    assert list(decode(s)) == [{"list of lists": [[[], [[]]], []]}]
 
 def test_simple_list(decode):
     s = """
