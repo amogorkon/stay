@@ -93,7 +93,7 @@ While all STAY documents MUST follow the language specification for interoperabi
 The simplest way to let the parser do additional work besides turning a source of strings into a datastructure (of strings) is by issuing simple line commands within the document.
 This is done by the following syntax:
 
-	% cmd args1 args2
+	@ cmd args1 args2
 
 which only has an effect if "cmd" has been passed into the parser as possible command, for instance like
 
@@ -101,14 +101,14 @@ which only has an effect if "cmd" has been passed into the parser as possible co
 
 making the following a valid expression:
 
-	% include include-test
+	@ include include-test
 
 inserting the content of the file "include-test" at the line currently being parsed.
 Be aware that if the exact same line is part of the file being inserted, this will result in a recursion and possibly an infinite loop!
 However, if include has not been passed into the Parser as valid command, only an error may be logged while the rest of the content of the file is still valid for all intents and purposes. 
 Multiple commands also can be concatenated (piped) with the results of the first passed into the next as input:
 
-	% cmd1 args11 args12 % cmd2 args21 args 22
+	@ cmd1 args11 args12 @ cmd2 args21 args 22
 
 You also can redefine the functions the parser uses by replacing them in the cases dict, but the recommended way
 for this (for instance for graph parsing) is to pass in a custom_cases dict into the Decoder class on init, which
