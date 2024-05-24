@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+  <ThingDef ParentName="BuildingBase" Name="TentDoorBase" Abstract="True">
+    <thingClass>Building_Door</thingClass>
+    <category>Building</category>
+    <altitudeLayer>DoorMoveable</altitudeLayer>
+    <fillPercent>0</fillPercent>
+    <useHitPoints>true</useHitPoints>
+    <stuffCategories>
+		<li>Fabric</li>
+		<li>Leathery</li>
+    </stuffCategories>
+    <statBases>
+      <MaxHitPoints>50</MaxHitPoints>
+      <Flammability>1.0</Flammability>
+    </statBases>
+    <leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
+    <selectable>true</selectable>
+    <tickerType>Normal</tickerType>
+    <rotatable>false</rotatable>
+    <soundImpactDefault>BulletImpact_Wood</soundImpactDefault>
+    <terrainAffordanceNeeded>Light</terrainAffordanceNeeded>
+    <designationCategory>Structure</designationCategory>
+    <holdsRoof>true</holdsRoof>
+    <staticSunShadowHeight>1.0</staticSunShadowHeight>
+	<constructEffect>ConstructDirt</constructEffect>
+    <repairEffect>ConstructDirt</repairEffect>
+    <blockLight>true</blockLight>
+    <drawerType>RealtimeOnly</drawerType>
+    <building>
+			<isInert>true</isInert>
+			<canPlaceOverWall>true</canPlaceOverWall>
+      <soundDoorOpenPowered>Door_OpenPowered</soundDoorOpenPowered>
+      <soundDoorClosePowered>Door_ClosePowered</soundDoorClosePowered>
+      <soundDoorOpenManual>Door_OpenManual</soundDoorOpenManual>
+      <soundDoorCloseManual>Door_CloseManual</soundDoorCloseManual>
+      <blueprintClass>Blueprint_Door</blueprintClass>
+      <blueprintGraphicData>
+        <texPath>Things/Building/Door/Door_Blueprint</texPath>
+      </blueprintGraphicData>
+      <ai_chillDestination>false</ai_chillDestination>
+    </building>
+	<researchPrerequisites>
+      <li>TentMaking</li>
+    </researchPrerequisites>
+    <comps>
+      <li Class="CompProperties_Forbiddable"/>
+    </comps>
+		<placeWorkers>
+			<li>PlaceWorker_DoorLearnOpeningSpeed</li>
+		</placeWorkers>
+  </ThingDef>
+
+  <ThingDef ParentName="TentDoorBase">
+    <defName>TentDoor</defName>
+    <label>Door</label>
+    <description>A fiber door that divides rooms. fast to build and open.</description>
+    <statBases>
+      <WorkToBuild>5</WorkToBuild>
+    </statBases>
+    <graphicData>
+      <texPath>Things/Building/Door/DoorSimple_Mover</texPath>
+      <graphicClass>Graphic_Single</graphicClass>
+      <damageData>
+        <!--  no damage marks because they don't move with the door
+        <rect>(0,0.12,1,0.76)</rect>-->
+        <enabled>false</enabled>
+      </damageData>
+    </graphicData>
+    <uiIconPath>Things/Building/Door/DoorSimple_MenuIcon</uiIconPath>
+    <costStuffCount>5</costStuffCount>
+    <designationHotKey>Misc1</designationHotKey>
+
+  </ThingDef>
+
+ <!--========================= Walls =============================-->
+
+
+
+  <ThingDef ParentName="BuildingBase" Name="TentWall">
+    <defName>FiberWall</defName>
+    <label>fabric wall</label>
+    <description>An impassable wall make by fiber. Capable of holding up a roof. Easy to build but doesn't give you any bullet cover.</description>
+    <thingClass>Building</thingClass>
+    <category>Building</category>
+	<designationCategory>Structure</designationCategory>
+    <graphicData>
+    <graphicClass>Graphic_Single</graphicClass>
+    <texPath>Things/Building/Linked/Fiber_Atlas</texPath>
+    <drawSize>(1,1)</drawSize>
+    <linkType>Basic</linkType>
+      <linkFlags>
+        <li>Wall</li>
+        <li>Rock</li>
+      </linkFlags>
+  <damageData>
+    <cornerTL>Damage/Corner</cornerTL>
+    <cornerTR>Damage/Corner</cornerTR>
+    <cornerBL>Damage/Corner</cornerBL>
+    <cornerBR>Damage/Corner</cornerBR>
+	<edgeTop>Damage/Edge</edgeTop>
+    <edgeBot>Damage/Edge</edgeBot>
+    <edgeLeft>Damage/Edge</edgeLeft>
+    <edgeRight>Damage/Edge</edgeRight>
+  </damageData>
+</graphicData>
+    <uiIconPath>Things/Building/Linked/WallSmooth_MenuIcon</uiIconPath>
+    <statBases>
+      <MaxHitPoints>25</MaxHitPoints>
+      <WorkToBuild>5</WorkToBuild>
+      <Flammability>1.0</Flammability>
+	  <Beauty>0</Beauty>
+    </statBases>
+    <costStuffCount>5</costStuffCount>
+    <leaveResourcesWhenKilled>false</leaveResourcesWhenKilled>
+    <altitudeLayer>Building</altitudeLayer>
+    <passability>Impassable</passability>
+    <blockWind>true</blockWind>
+    <castEdgeShadows>true</castEdgeShadows>
+    <fillPercent>0</fillPercent>
+    <coversFloor>true</coversFloor>
+    <placingDraggableDimensions>1</placingDraggableDimensions>
+    <tickerType>Never</tickerType>
+    <rotatable>false</rotatable>
+    <selectable>true</selectable>
+    <neverMultiSelect>true</neverMultiSelect>
+    <terrainAffordanceNeeded>Medium</terrainAffordanceNeeded>
+    <holdsRoof>true</holdsRoof>
+    <designationCategory>Structure</designationCategory>
+    <staticSunShadowHeight>1.0</staticSunShadowHeight>
+    <constructEffect>ConstructDirt</constructEffect>
+    <repairEffect>ConstructDirt</repairEffect>
+    <blockLight>true</blockLight>
+    <canOverlapZones>false</canOverlapZones>
+    <stuffCategories>
+		<li>Fabric</li>
+		<li>Leathery</li>
+    </stuffCategories>
+    <building>
+      <isInert>true</isInert>
+      <ai_chillDestination>false</ai_chillDestination>
+      <blueprintGraphicData>
+        <texPath>Things/Building/Linked/Wall_Blueprint_Atlas</texPath>
+      </blueprintGraphicData>
+    </building>
+	<researchPrerequisites>
+      <li>TentMaking</li>
+    </researchPrerequisites>
+    <damageMultipliers>
+      <li>
+        <damageDef>Bomb</damageDef>
+        <multiplier>2</multiplier>
+      </li>
+    </damageMultipliers>
+    <designationHotKey>Misc3</designationHotKey>
+  </ThingDef>
+
+</Defs>

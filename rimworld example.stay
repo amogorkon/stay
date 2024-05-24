@@ -1,0 +1,124 @@
+<CamelCase>
+thing class: building door
+category: building
+altitude layer: door moveable
+fill percent: 0
+use hit points: true
+stuff categories: [Fabric Leathery]
+stat bases:
+	max hit points: 50
+	flammability: 1.0
+leave resources when killed: false
+selectable: true
+ticker type: Normal
+rotatable: false
+sound impact default: bullet impact wood
+terrain affordance needed: light
+designation category: structure
+holds roof: true
+static sun shadow height: 1
+construct effect: construct dirt
+repair effect: construct dirt
+block light: true
+building:
+	is inert: true
+	can place over wall: true
+	sound door open powered: door open powered
+	sound door close powered: door close powered
+	sound door open manual: door close manual
+	sound door close manual: door close manual
+	blueprint class: Blueprint_Door
+	blueprint graphic data:
+		tex path: things/building/door/door_blueprint
+	ai chill destination: false
+research prerequisites: [tentmaking]
+comps:::[
+%include comps
+]:::
+place workers:::[
+PlaceWorker_DoorLearnOpeningSpeed
+]
+
+---
+
+Parent: TentDoorBase
+defName: TentDoor
+label: Door
+description: foobar
+stat bases:
+	WorkToBuild: 5
+graphic data:
+	texPath: things/building_door/...
+damage data:
+	enabled: false
+
+uiIconPath: things/building..
+coststuffcount: 5
+designation hot key: misc1
+
+---
+
+defName: FiberWall
+label: fabric wall
+description: foobar..
+thing class: Building
+category: building
+designation category: structure
+graphic data:
+	class: graphic_single
+	tex path: things/building/linked/fiber..
+	draw size: [1 1]
+	linkType: Basic
+	link flags: [Wall Rock]
+	damage data:
+		corner TL: damage/corner
+		corner TR: damage/corner
+		corner BL: damage/corner
+		corner BR: damage/corner
+		edge top: damage/edge
+		edge bot: damage/edge
+		edge left: damage/edge
+		edge right: damage/edge
+
+ui icon path: things/...
+stat bases:
+	max hit points: 25
+	work to build: 5
+	flammability: 1
+	beauty: 0
+
+cost stuff count: 5
+leave resources when killed: false
+altitude layer: building
+passability: impassable
+block wind: true
+cast edge shadows: true
+fill percent: 0
+covers floor: true
+placing draggable dimensions: 1
+ticker type: Never
+rotatable: false
+selectable: true
+never multi select: true
+terrain affordance needed: Medium
+holds roof: true
+designation category: structure
+static sun shadow height: 1
+construct effect: ConstructDirt
+repair effect: ConstructDirt
+block light: true
+can overlap zones: false
+stuff categories: [Fabric Leathery]
+building:
+	is inert: true
+	ai chill destination: false
+	blueprint graphic data:
+		tex path: things/..
+research prerequisites: [TentMaking]
+damage multipliers:::[*
+damage def: Bomb
+multiplier: 2
+---
+damage def: stick
+multiplier: 0.2
+]
