@@ -15,9 +15,12 @@ from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
 from io import TextIOBase
 from shlex import split
+from types import EllipsisType
+from typing import Callable
 
 logger = logging.getLogger()
 
+type Ellipsis = EllipsisType
 
 T = Enum("Token", "start simple key comment long list dict graph directive")
 D = Enum("Directives", "line key value struct meta")
@@ -32,55 +35,64 @@ class ParsingError(Exception):
 
 
 class State:
-    def __init__(self):
-        self.tokens = deque([T.start])
+    def __init__(self, context: dict[str, str]):
+        self.tokens: deque[T] = deque([T.start])
 
         # the dictionary to be yielded as one document
-        self.doc = {}
+        self.doc: dict[str, str] = {}
 
         # dicts of dicts can contain any other datastructure, thus
-        self.dict_stack: deque[str] = deque()
+        self.dict_stack: deque[dict[str, str]] = deque()
         # for lists - maybe unifyable?
-        self.stack = []
+        self.stack: list[tuple[str]] = []
         self.value: list[str] = []  # Current value in the doc
         self.key: str | None = None  # Current key in the doc
 
-        self.context = {}  # can be used by directives to manipulate and change content ad hoc
+        self.context: dict[str, str] = (
+            context or {}
+        )  # can be used by directives to manipulate and change content ad hoc
         # all directives to be executed at certain points, in the order as activated
-        self.directives = {D.line: {}, D.key: {}, D.value: {}, D.struct: {}, D.meta: {}}
+        self.directives: dict[D, dict[str, Callable[[str], str]]] = {
+            D.line: {},
+            D.key: {},
+            D.value: {},
+            D.struct: {},
+            D.meta: {},
+        }
 
 
-def level(line: str, spaces_per_indent: int):
+def level(line: str, spaces_per_indent: int) -> int:
     line = line.expandtabs(tabsize=spaces_per_indent)
     return (len(line) - len(line.lstrip())) // spaces_per_indent
 
 
-def _do_start(n: int, line: str, st: State):
+def _do_start(n: int, line: str, st: State) -> tuple[None, None]:
     return None, None
 
 
-def _do_comment(n: int, line: str, st: State):
+def _do_comment(n: int, line: str, st: State) -> tuple[Ellipsis, None]:
     return ..., None
 
 
-def _do_long(n: int, line: str, st: State):
+def _do_long(n: int, line: str, st: State) -> tuple[T | Ellipsis, str | None]:
     if line.startswith(":::"):
         return st.tokens.pop(), "\n".join(st.value)
     st.value.append(line)
     return ..., None
 
 
-def _do_list(n: int, line: str, st: State):
+def _do_list(
+    n: int, line: str, st: State
+) -> tuple[T | Ellipsis, tuple[str, ...] | None]:
     line = line.strip()
 
     if line.startswith("]"):
         token = st.tokens.pop()
         if st.tokens[-1] is not T.list:
             return token, tuple(st.stack)
-        else:
-            p = st.stack.pop()
-            st.stack[0] = tuple(p)
-            return ..., None
+        p = st.stack.pop()
+        st.stack[0] = tuple(p)
+        return ..., None
 
     if line.startswith(r"\]"):
         line = line[1:]
@@ -103,51 +115,49 @@ def _do_list(n: int, line: str, st: State):
     return ..., None
 
 
-def _do_dicts(n, line, st):
+def _do_dicts(n: int, line: str, st: State) -> tuple[T | Ellipsis, list[str] | None]:
     if line.startswith("}"):
         return st.tokens.pop(), st.value
-    else:
-        if line.startswith(r"\}"):
-            line = line[1:]
-        line = line.strip()
-        st.value.append(line)
-        return ..., None
-
-
-def _do_graph(n, line, st):
+    if line.startswith(r"\}"):
+        line = line[1:]
+    line = line.strip()
+    st.value.append(line)
     return ..., None
 
 
-def _do_directive(n, line, st):
+def _do_graph(n: int, line: str, st: State):
+    return ..., None
+
+
+def _do_directive(n: int, line: str, st: State) -> tuple[T | Ellipsis, None]:
     if line.startswith(">"):
         return st.tokens.pop(), None
-    else:
-        st.value.append(line)
-        return ..., None
+    st.value.append(line)
+    return ..., None
 
 
 class Decoder:
     def __init__(
         self,
-        commands=None,
-        meta_directives=None,
-        line_directives=None,
-        value_directives=None,
-        key_directives=None,
-        struct_directives=None,
-        default_context=None,
-        custom_cases=None,
+        commands: dict[str, Callable[[str], str]] | None = None,
+        meta_directives: dict[str, str] | None = None,
+        line_directives: dict[str, str] | None = None,
+        value_directives: dict[str, str] | None = None,
+        key_directives: dict[str, str] | None = None,
+        struct_directives: dict[str, str] | None = None,
+        default_context: dict[str, str] | None = None,
+        custom_cases: dict[str, str] | None = None,
     ):
-        self.commands = commands if commands else {}
-        self.directives = {
-            D.line: line_directives if line_directives else {},
-            D.key: key_directives if key_directives else {},
-            D.value: value_directives if value_directives else {},
-            D.struct: struct_directives if struct_directives else {},
-            D.meta: meta_directives if meta_directives else {},
+        self.commands: dict[str, Callable[[str], str]] = commands or {}
+        self.directives: dict[D, dict[str, Callable[[str], str]]] = {
+            D.line: line_directives or {},
+            D.key: key_directives or {},
+            D.value: value_directives or {},
+            D.struct: struct_directives or {},
+            D.meta: meta_directives or {},
         }
-        self.default_context = default_context if default_context else {}
-        self.custom_cases = custom_cases if custom_cases else {}
+        self.default_context: dict[str, str] = default_context or {}
+        self.custom_cases = custom_cases or {}
 
     def __call__(
         self, lines: Iterable[str], spaces_per_indent: int = 4
@@ -170,7 +180,7 @@ class Decoder:
             T.directive: _do_directive,
         }
 
-        cases.update(self.custom_cases)
+        cases |= self.custom_cases
 
         for n, line in enumerate(lines):
             # commands
@@ -181,7 +191,7 @@ class Decoder:
                         "@ denotes the start of a new command, alas none given."
                     )
 
-                result = None
+                result: str | None = None
                 for p in parts:
                     cmd, *args = split(p)
                     try:
@@ -195,47 +205,39 @@ class Decoder:
                             cases=cases,
                         )
                     except KeyError:
-                        logger.warning(
-                            "command %s not defined for this Decoder." % (cmd)
-                        )
+                        logger.warning(f"command {cmd} not defined for this Decoder.")
                 logger.info(line)
                 continue
 
             # directives
             if line.startswith("</"):
                 x = line.find(">")
-                if x == -1:
-                    end = None
-                else:
-                    end = x
+                end = None if x == -1 else x
                 name, *parts = split(line[2:end])
 
-                for DD, F in self.directives.items():
+                for directive, F in self.directives.items():
                     if name in F:
-                        del st.directives[DD][name]
+                        del st.directives[directive][name]
                 continue
 
             if line.startswith("<"):
                 # allows normal comments after closing
                 x = line.find(">")
-                if x == -1:
-                    end = None
-                else:
-                    end = x
+                end = None if x == -1 else x
                 name, *args = split(line[1:end])
 
-                if not any(name in d for d in self.directives.values()):
+                if all(name not in d for d in self.directives.values()):
                     logger.info(name, "not specified as any viable directive.")
                 else:
                     st.key = [
-                        (DD, name, F[name], args)
-                        for DD, F in self.directives.items()
+                        (directive, name, F[name], args)
+                        for directive, F in self.directives.items()
                         if name in F
                     ]
                 if end:
                     try:
-                        for DD, name, f, args in st.key:
-                            st.directives[DD][name] = f(*args)
+                        for directive, name, f, args in st.key:
+                            st.directives[directive][name] = f(*args)
                     except TypeError as e:
                         logger.error(
                             "Sure the directives are correctly specified in the Decoder?",
@@ -247,7 +249,7 @@ class Decoder:
                 continue
 
             for f in st.directives[D.line].values():
-                line = f(line)
+                line: str = f(line)
 
             # a short comment
             if line.startswith("#"):
@@ -269,8 +271,8 @@ class Decoder:
             token, data = cases[st.tokens[-1]](n, line, st)
 
             if token is T.directive:
-                for DD, name, f, args in st.key:
-                    st.directives[DD][name] = f(*args, s=st.value)
+                for directive, name, f, args in st.key:
+                    st.directives[directive][name] = f(*args, s=st.value)
                 continue
 
             if token is ...:
@@ -300,11 +302,7 @@ class Decoder:
                 k = f(k)
 
             if isinstance(k, str):
-                if k.endswith('"'):
-                    k = k[:-1].leftstrip()
-                else:
-                    k = k.strip()
-
+                k = k[:-1].leftstrip() if k.endswith('"') else k.strip()
             # need to add a leading " if spaces must not be ignored
 
             for f in st.directives[D.value].values():
@@ -314,11 +312,7 @@ class Decoder:
                 st.doc[k] = v
                 continue
 
-            if v.startswith('"'):
-                v = v[1:]
-            else:
-                v = v.strip()
-
+            v = v[1:] if v.startswith('"') else v.strip()
             if v == "::":
                 st.tokens.append(T.long)
                 st.value = []
@@ -337,7 +331,7 @@ class Decoder:
                 st.key = k.strip()
                 continue
 
-            for x in range(abs(level(line, spaces_per_indent) - len(st.dict_stack))):
+            for _ in range(abs(level(line, spaces_per_indent) - len(st.dict_stack))):
                 prev, prev_k = st.dict_stack.pop()
                 prev[prev_k] = st.doc
                 st.doc = prev
@@ -369,20 +363,21 @@ class Decoder:
 
 class Encoder:
     def __call__(
-        self, it: Iterable[str] | dict[str, str] | dataclass, spaces_per_indent=4
-    ):
+        self, it: Iterable[str | dict[str, str] | dataclass], spaces_per_indent: int = 4
+    ) -> str:
         """Process an iterator of dictionaries as STAY documents, without comments.
         On second thought, it would be cool to auto-add comments, making the file self-documenting.
         """
         it = [it] if isinstance(it, dict) else it
         it = [asdict(it)] if is_dataclass(it) else it
 
-        output = "===\n".join(
+        return "===\n".join(
             self.__process(asdict(D) if is_dataclass(D) else D) for D in it
         )
-        return output
 
-    def __process(self, D: dict, level=0, spaces_per_indent=4):
+    def __process(
+        self, D: dict[str, str], level: int = 0, spaces_per_indent: int = 4
+    ) -> str:
         def do(k, v):
             if not isinstance(v, Iterable) or (isinstance(v, str) and "\n" not in v):
                 line = f"{' ' * level * spaces_per_indent}{k}: {v}\n"
