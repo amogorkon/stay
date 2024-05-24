@@ -1,0 +1,64 @@
+
+{
+  "@context": {
+    "born": "http://schema.org/birthDate"
+  },
+  "born": "1879-03-14"
+}
+
+
+
+% include include-test
+
+
+
+as STAY:
+
+
+matrix:::[
+:::[
+[1 2 3]
+[2 3 4]
+]
+
+[4 5 6]
+[7 8 9]
+]
+
+<comments>
+grunur digsite 1:
+	desc: grunur digsite 1 desc
+	picture: GFX_evt_baol_grunur
+	stages: 2
+	max instances: 1
+	weight: 0 # set by
+</comments>
+	allow:
+		exists: leader
+		leader: 
+			leader class: scientist
+	visible: 
+		has country flag: baol intro
+		default site visible trigger: True
+
+	stage:
+		difficulty: 2
+
+
+Lists of lists of lists are possible by simply putting it
+
+	list of lists:::[
+	[a b c]
+	inner:::[
+	1
+	2
+	3
+	] inner
+	:::[
+	foo
+	bar
+	] anonymous inner
+	]
+
+	 which enables simple annotations like "inner" as help for the reader. This is possible, since keys have no meaning within lists. The above notation would result in the structure 
+	 [["a", "b", "c"], ["1", "2", "3"], ["foo", "bar"]]
