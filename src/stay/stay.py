@@ -8,24 +8,13 @@
 [{'a': '1'}]
 """
 
-
 import logging
-
 from collections import deque
 from collections.abc import Iterable
-from dataclasses import asdict
-from dataclasses import dataclass
-from dataclasses import is_dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from enum import Enum
-from functools import partial
 from io import TextIOBase
 from shlex import split
-from typing import Dict
-from typing import Iterator
-from typing import List
-from typing import Sequence
-from typing import Union
-
 
 logger = logging.getLogger()
 
@@ -43,46 +32,45 @@ class ParsingError(Exception):
 
 
 class State:
-    def __init__(self, context):
+    def __init__(self):
         self.tokens = deque([T.start])
 
         # the dictionary to be yielded as one document
         self.doc = {}
 
         # dicts of dicts can contain any other datastructure, thus
-        self.dict_stack = deque()
+        self.dict_stack: deque[str] = deque()
         # for lists - maybe unifyable?
         self.stack = []
-        self.value = []  # Current value in the doc
-        self.key = None  # Current key in the doc
+        self.value: list[str] = []  # Current value in the doc
+        self.key: str | None = None  # Current key in the doc
 
         self.context = {}  # can be used by directives to manipulate and change content ad hoc
         # all directives to be executed at certain points, in the order as activated
         self.directives = {D.line: {}, D.key: {}, D.value: {}, D.struct: {}, D.meta: {}}
 
 
-def level(line, spaces_per_indent):
+def level(line: str, spaces_per_indent: int):
     line = line.expandtabs(tabsize=spaces_per_indent)
     return (len(line) - len(line.lstrip())) // spaces_per_indent
 
 
-def _do_start(n, line, st):
+def _do_start(n: int, line: str, st: State):
     return None, None
 
 
-def _do_comment(n, line, st):
+def _do_comment(n: int, line: str, st: State):
     return ..., None
 
 
-def _do_long(n, line, st):
+def _do_long(n: int, line: str, st: State):
     if line.startswith(":::"):
         return st.tokens.pop(), "\n".join(st.value)
-    else:
-        st.value.append(line)
-        return ..., None
+    st.value.append(line)
+    return ..., None
 
 
-def _do_list(n, line, st):
+def _do_list(n: int, line: str, st: State):
     line = line.strip()
 
     if line.startswith("]"):
@@ -150,7 +138,6 @@ class Decoder:
         default_context=None,
         custom_cases=None,
     ):
-
         self.commands = commands if commands else {}
         self.directives = {
             D.line: line_directives if line_directives else {},
@@ -162,7 +149,9 @@ class Decoder:
         self.default_context = default_context if default_context else {}
         self.custom_cases = custom_cases if custom_cases else {}
 
-    def __call__(self, lines: Iterator[str], spaces_per_indent=4) -> Iterator[dict]:
+    def __call__(
+        self, lines: Iterable[str], spaces_per_indent: int = 4
+    ) -> Iterable[dict[str, str]]:
         if isinstance(lines, TextIOBase):
             lines = lines.readlines()
 
@@ -188,18 +177,27 @@ class Decoder:
             if line.startswith("@"):
                 parts = [p.strip() for p in line[1:].split("@")]
                 if not parts[-1]:
-                    raise ParsingError("@ denotes the start of a new command, alas none given.")
+                    raise ParsingError(
+                        "@ denotes the start of a new command, alas none given."
+                    )
 
                 result = None
                 for p in parts:
                     cmd, *args = split(p)
                     try:
                         result = self.commands[cmd](
-                            result, *args, lines=lines, n=n, decoder=self, state=st, cases=cases
+                            result,
+                            *args,
+                            lines=lines,
+                            n=n,
+                            decoder=self,
+                            state=st,
+                            cases=cases,
                         )
-                    except KeyError as e:
-                        raise ParsingError("command %s not defined for this Decoder." % (cmd))
-
+                    except KeyError:
+                        logger.warning(
+                            "command %s not defined for this Decoder." % (cmd)
+                        )
                 logger.info(line)
                 continue
 
@@ -230,7 +228,9 @@ class Decoder:
                     logger.info(name, "not specified as any viable directive.")
                 else:
                     st.key = [
-                        (DD, name, F[name], args) for DD, F in self.directives.items() if name in F
+                        (DD, name, F[name], args)
+                        for DD, F in self.directives.items()
+                        if name in F
                     ]
                 if end:
                     try:
@@ -238,7 +238,8 @@ class Decoder:
                             st.directives[DD][name] = f(*args)
                     except TypeError as e:
                         logger.error(
-                            "Sure the directives are correctly specified in the Decoder?", e
+                            "Sure the directives are correctly specified in the Decoder?",
+                            e,
                         )
                 else:
                     st.tokens.append(T.directive)
@@ -367,14 +368,18 @@ class Decoder:
 
 
 class Encoder:
-    def __call__(self, it: Union[Iterable, Dict, dataclass], spaces_per_indent=4):
+    def __call__(
+        self, it: Iterable[str] | dict[str, str] | dataclass, spaces_per_indent=4
+    ):
         """Process an iterator of dictionaries as STAY documents, without comments.
         On second thought, it would be cool to auto-add comments, making the file self-documenting.
         """
         it = [it] if isinstance(it, dict) else it
         it = [asdict(it)] if is_dataclass(it) else it
 
-        output = "===\n".join(self.__process(asdict(D) if is_dataclass(D) else D) for D in it)
+        output = "===\n".join(
+            self.__process(asdict(D) if is_dataclass(D) else D) for D in it
+        )
         return output
 
     def __process(self, D: dict, level=0, spaces_per_indent=4):
