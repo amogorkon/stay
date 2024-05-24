@@ -1,0 +1,9 @@
+do: generalize #lists
+note: lists of lists of lists are not possible with this syntax.
+---
+do: Have multiple dicts within a list and should support the full range of what is possible
+---
+do: test graph blocks with actual graphs
+priority: 2
+level:
+---
